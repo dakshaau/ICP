@@ -4,7 +4,7 @@
 
 ### Decription:
 
-Register two 3D point clouds of the same area usin Iterative Closest Point, or ICP.
+Register two 3D point clouds of the same area using Iterative Closest Point, or ICP.
 
 ### Contributors:
 - [Daksh Gupta](https://github.com/dakshaau), *CWID: A20351161*
