@@ -3,6 +3,8 @@ import os
 import pickle
 from datetime import datetime as dt, timedelta
 from read_data import readFile
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
 
 def distance(p1, p2):
 	return np.sqrt(np.sum(np.square(p1-p2),axis=-1))
@@ -19,7 +21,7 @@ if __name__ == '__main__':
 
 	ind = np.where(np.equal(pointcloud1[:,3],pointcloud2[:,3]))[0]
 
-	print(ind.shape)
+	# print(ind.shape)
 
 	# d1 = distance(pointcloud1[0,:3], pointcloud1[:,:3])
 	# d2 = distance(pointcloud2[0,:3], pointcloud2[:,:3])
@@ -64,7 +66,7 @@ if __name__ == '__main__':
 	# print(np.argmax(s))
 	ind = np.argmax(s)
 
-	q_r = u[:,ind]
+	q_r = v[ind,:]
 	# print(np.sum(np.square(q_r)))
 	# print(q_r.shape)
 
@@ -86,8 +88,47 @@ if __name__ == '__main__':
 
 	q_t = com_p2 - R.dot(com_p1)
 
-	print(q_t)
+	# q = np.hstack((R,q_t))
+	# print(R)
+	# print(q_t)
+	# print(q)
 
+	rotated_p1 = R.dot(pointcloud1[:,:3].T)
+	# print(rotated_p1.T[:5])
+	final_p1 = rotated_p1 - q_t*np.ones(rotated_p1.shape)
+	# print(q_t*np.ones(rotated_p1.shape)[:,:5])
+	# print(final_p1.shape)
+	final_p1 = final_p1.T
+
+	# print(pointcloud2[:5])
+	# print(final_p1[:5])
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+
+	# X = pointcloud1[:100,0]
+	# Y = pointcloud1[:100,1]
+	# Z = pointcloud1[:100,2]
+
+	# ax.plot_wireframe(X,Y,Z, color='b')
+
+	X = pointcloud2[:10000,0]
+	Y = pointcloud2[:10000,1]
+	Z = pointcloud2[:10000,2]
+
+	ax.scatter(X,Y,Z, color='r', marker='o')
+
+	ax.set_xlabel('Latitude')
+	ax.set_ylabel('Longitude')
+	ax.set_zlabel('Altitude')
+	
+	# X = final_p1[:100,0]
+	# Y = final_p1[:100,1]
+	# Z = final_p1[:100,2]
+
+	# ax.plot_wireframe(X,Y,Z,rstride = 10, cstride=10, color='g')
+
+	plt.show()
 
 
 	# print(delta.shape)
