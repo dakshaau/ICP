@@ -95,11 +95,13 @@ def Q(p, x):
 
 def closest_point(p1, p2):
 	p = np.zeros(p1.shape, dtype=p2.dtype)
-	inds = np.zeros(p2.shape[0], dtype=np.bool_)
+	inds = np.ones(p2.shape[0], dtype=np.bool_)
 	for i in range(p1.shape[0]):
-		temp = p2[np.where(~inds)[0],:3]
-		dist = distance(p1[i,:3], temp)
+		x = np.where(inds)[0]
+		temp = p2[x,:]
+		dist = distance(p1[i,:3], temp[:,:3])
 		ind = np.argmin(dist)
+		inds[x[ind]] = False
 		# print(ind.shape)
 		# x = ind[0]
 		# k = 0
@@ -108,7 +110,7 @@ def closest_point(p1, p2):
 		# 	x = ind[k]
 		# inds[x] = True
 		# print(p2[ind,:])
-		p[i,:] = p2[ind,:]
+		p[i,:] = temp[ind,:]
 	return p
 
 def ICP(p1, p2):
@@ -123,7 +125,7 @@ def ICP(p1, p2):
 		p0 = p0.T
 		if not (m_err is None):
 			diff = m_err - ms
-			if diff == 0:
+			if diff > 1e-6:
 				break
 		m_err = ms
 		if i%10 == 0:
