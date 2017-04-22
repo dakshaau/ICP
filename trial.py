@@ -5,6 +5,7 @@ from datetime import datetime as dt, timedelta
 from read_data import readFile
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
+from sklearn.neighbors import KDTree
 
 def distance(p1, p2):
 	return np.sqrt(np.sum(np.square(p1-p2),axis=-1))
@@ -93,40 +94,55 @@ def Q(p, x):
 	ms = np.mean(ms, axis = 0)
 	return ms, R, q_t
 
-def closest_point(p1, p2):
-	p = np.zeros(p1.shape, dtype=p2.dtype)
-	inds = np.ones(p2.shape[0], dtype=np.bool_)
-	for i in range(p1.shape[0]):
-		x = np.where(inds)[0]
-		temp = p2[x,:]
-		dist = distance(p1[i,:3], temp[:,:3])
-		ind = np.argmin(dist)
-		inds[x[ind]] = False
-		# print(ind.shape)
-		# x = ind[0]
-		# k = 0
-		# while inds[x]:
-		# 	k += 1
-		# 	x = ind[k]
-		# inds[x] = True
-		# print(p2[ind,:])
-		p[i,:] = temp[ind,:]
+def closest_point(p1, tree, p2):
+	
+	# p = np.zeros(p1.shape, dtype=p2.dtype)
+	# inds = np.ones(p2.shape[0], dtype=np.bool_)
+	# for i in range(p1.shape[0]):
+	# 	# x = np.where(inds)[0]
+	# 	temp = p2[x,:]
+	# 	p2.query
+	# 	# dist = distance(p1[i,:3], temp[:,:3])
+	# 	ind = np.argmin(dist)
+	# 	inds[x[ind]] = False
+	# 	# print(ind.shape)
+	# 	# x = ind[0]
+	# 	# k = 0
+	# 	# while inds[x]:
+	# 	# 	k += 1
+	# 	# 	x = ind[k]
+	# 	# inds[x] = True
+	# 	# print(p2[ind,:])
+	# 	p[i,:] = temp[ind,:]
+	ind = tree.query(p1, return_distance = False)
+	ind = ind.reshape((ind.shape[0]))
+	# print(_[:10])
+	p = p2[ind,:]
+	del ind
+	# print(p1[:10])
+	# print(p[:10])
 	return p
 
 def ICP(p1, p2):
 	p0 = p1[:,:]
-	R0 = np.eye(3,dtype=np.float32)
+	R0 = np.eye(4,dtype=np.float32)
 	t0 = np.array([[0],[0],[0]],dtype=np.float32)
-	m_err = None
+	tree = KDTree(p2)
+	p0 = R0.dot(p0.T)
+	p0 = p0.T
+	m_err = np.mean(np.square(distance(p2[:,:3],p0[:,:3])), axis=0)
+	print('Initial Error: {}'.format(m_err))
 	for i in range(1000):
-		Y = closest_point(p0, p2)
+		Y = closest_point(p0, tree, p2)
+		# if i == 0:
+		# 	break
 		ms, R0, t0 = Q(p0, Y)
 		p0 = R0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
 		p0 = p0.T
-		if not (m_err is None):
-			diff = m_err - ms
-			if diff > 1e-6:
-				break
+		diff = m_err - ms
+		if abs(diff) < 1e-6:
+			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
+			break
 		m_err = ms
 		if i%10 == 0:
 			print('Mean square error at iteration {}: {}'.format(i, ms))
@@ -233,7 +249,7 @@ if __name__ == '__main__':
 	ms = None
 	print()
 	cur = dt.now()
-	ms, R, t, final_p1 = ICP(pc1[:10000,:], pc2[:10000,:])
+	ms, R, t, final_p1 = ICP(pc1[:,:], pc2[:,:])
 	new_cur = dt.now()
 	delt = new_cur - cur
 	print('Time Taken: {}'.format(str(delt)))
@@ -268,7 +284,7 @@ if __name__ == '__main__':
 	Y = pointcloud1[:1000,1]
 	Z = pointcloud1[:1000,2]
 
-	ax.scatter(X,Y,Z, color='b', marker='o')
+	ax.scatter(X,Y,Z, color='b', marker='o', label='Point Cloud 1')
 	# ax.plot_wireframe(X,Y,Z, color='b')
 
 	X = pointcloud2[:1000,0]
@@ -276,7 +292,7 @@ if __name__ == '__main__':
 	Z = pointcloud2[:1000,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='r')
-	ax.scatter(X,Y,Z, color='r', marker='o')
+	ax.scatter(X,Y,Z, color='r', marker='o',label='Point Cloud 2')
 
 	ax.set_xlabel('Latitude')
 	ax.set_ylabel('Longitude')
@@ -290,7 +306,9 @@ if __name__ == '__main__':
 	Z = final_p1[:1000,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='g')
-	ax.scatter(X,Y,Z, color='g', marker='^')
+	ax.scatter(X,Y,Z, color='g', marker='o', label='Registered Point Cloud')
+	ax.legend()
+
 
 	plt.show()
 
