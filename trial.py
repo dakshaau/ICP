@@ -139,31 +139,11 @@ def Q(p, x):
 
 def closest_point(p1, tree, p2):
 	
-	# p = np.zeros(p1.shape, dtype=p2.dtype)
-	# inds = np.ones(p2.shape[0], dtype=np.bool_)
-	# for i in range(p1.shape[0]):
-	# 	# x = np.where(inds)[0]
-	# 	temp = p2[x,:]
-	# 	p2.query
-	# 	# dist = distance(p1[i,:3], temp[:,:3])
-	# 	ind = np.argmin(dist)
-	# 	inds[x[ind]] = False
-	# 	# print(ind.shape)
-	# 	# x = ind[0]
-	# 	# k = 0
-	# 	# while inds[x]:
-	# 	# 	k += 1
-	# 	# 	x = ind[k]
-	# 	# inds[x] = True
-	# 	# print(p2[ind,:])
-	# 	p[i,:] = temp[ind,:]
 	ind = tree.query(p1, return_distance = False)
 	ind = ind.reshape((ind.shape[0]))
 	# print(_[:10])
 	p = p2[ind,:]
 	del ind
-	# print(p1[:10])
-	# print(p[:10])
 	return p
 
 def ICP(p1, p2):
@@ -171,52 +151,32 @@ def ICP(p1, p2):
 	p0 = p1[:,:]
 	R0 = None
 	X0 = np.eye(4, dtype=np.float32)
-	# t0 = np.array([[0],[0],[0]],dtype=np.float32)
-	# q0 = np.array([[1],[0],[0],[0],[0],[0],[0]], dtype=p0.dtype)
 	tree = KDTree(p2)
-	# R0 = createR(q0[:4,:],q0[4:,:])
 	p0 = X0.dot(p0.T)
 	p0 = p0.T
 	t = None
 	m_err = np.mean(distance(p2,p0),axis=0)
-	# del_theta = 10.
-	# theta0 = 0.
-	# delQ0 = None
-	# # delQ = np.zeros((iters),np.float32)
-	# ms = np.zeros((iters),np.float32)
-	# theta = np.zeros((iters),np.float32)
-	# v = np.zeros((iters),np.float32)
 	print('Initial Error: {}'.format(m_err))
-	# for i in range(iters):
-	# 	Y = closest_point(p0, tree, p2)
-	# 	# if i == 0:
-	# 	# 	break
-	# 	X0, R0, t = Q(p0, Y)
-	# 	# delQ = q - q0
-	# 	# angle = delQ.T.dot(delQ0)/(np.linalg.norm(delQ,axis=0)*np.linalg.norm(delQ0,axis=0))
-	# 	# theta = np.arccos(angle) * 180./np.pi
-	# 	# if i >= 1:
-	# 	# 	theta0 = theta
-	# 	# 	delQ0 = delQ
-	# 	# if theta < del
-	# 	# R0 = createR(q[:4,:],q[4:,:])
-	# 	p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
-	# 	p0 = p0.T
-	# 	ms = distance(Y[:,:3], p0[:,:3])
-	# 	ms = np.mean(ms,axis=0)
-	# 	diff = m_err - ms
-	# 	if abs(diff) < 1e-10:
-	# 		print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
-	# 		break
-	# 	m_err = ms
-	# 	if i%10 == 0:
-	# 		print('Mean square error at iteration {}: {}'.format(i, ms))
-	X0, R0, t = Q(p0, p2)
-	# R0 = createR(q[:4,:],q[4:,:])
-	p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
-	p0 = p0.T
-	m_err = np.mean(distance(p2[:,:3],p0[:,:3]),axis=0)
-	print('Mean square error at iteration {}: {}'.format(0, m_err))
+	for i in range(iters):
+		Y = closest_point(p0, tree, p2)
+		X0, R0, t = Q(p0, Y)
+		p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
+		p0 = p0.T
+		ms = distance(Y[:,:3], p0[:,:3])
+		ms = np.mean(ms,axis=0)
+		diff = m_err - ms
+		if abs(diff) < 1e-10:
+			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
+			break
+		m_err = ms
+		if i%10 == 0:
+			print('Mean square error at iteration {}: {}'.format(i, ms))
+	# X0, R0, t = Q(p0, p2)
+	# # R0 = createR(q[:4,:],q[4:,:])
+	# p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
+	# p0 = p0.T
+	# m_err = np.mean(distance(p2[:,:3],p0[:,:3]),axis=0)
+	# print('Mean square error at iteration {}: {}'.format(0, m_err))
 	return m_err, X0, R0, t, p0
 
 if __name__ == '__main__':
@@ -279,27 +239,6 @@ if __name__ == '__main__':
 	pc2 = cs_Mat.dot(pointcloud2.T)
 	pc2 = pc2.T
 
-	# print(pointcloud1[:2,:])
-
-	# pointcloud1 = np.hstack((pointcloud1, np.ones((pointcloud1.shape[0],1), dtype=pointcloud1.dtype)))
-
-	# pointcloud1 = rev_cs_Mat.dot(pointcloud1.T)
-	# pointcloud1 = pointcloud1.T
-	# print(pointcloud1[:2,:])
-	# exit()
-	# ind = np.argsort(pointcloud1,axis = 0)
-	# print(pointcloud1[ind[0][:10],:])
-
-	# print(np.min(pointcloud1[:,0]), np.max(pointcloud1[:,0]))
-	# print(np.min(pointcloud1[:,1]), np.max(pointcloud1[:,1]))
-	# print(np.min(pointcloud1[:,2]), np.max(pointcloud1[:,2]))
-
-	# print(np.min(pointcloud2[:,0]), np.max(pointcloud2[:,0]))
-	# print(np.min(pointcloud2[:,1]), np.max(pointcloud2[:,1]))
-	# print(np.min(pointcloud2[:,2]), np.max(pointcloud2[:,2]))
-	# temp = rev_cs_Mat.dot(pointcloud2.T)
-	# temp = temp.T
-
 	# with open('p2_1.xyz','w') as file:
 	# 	for i in range(temp.shape[0]):
 	# 		file.write('{} {} {}\n'.format(temp[i,0],temp[i,1],temp[i,2]))
@@ -320,19 +259,7 @@ if __name__ == '__main__':
 	new_cur = dt.now()
 	delt = new_cur - cur
 	print('Time Taken: {}'.format(str(delt)))
-	# t = R[:3,3]
-	# print(ind.shape)
 
-	# d1 = distance(pointcloud1[0,:3], pointcloud1[:,:3])
-	# d2 = distance(pointcloud2[0,:3], pointcloud2[:,:3])
-	# temp = np.hstack((final_p1, np.ones((final_p1.shape[0],1), dtype = final_p1.dtype)))
-	# temp = rev_cs_Mat.dot(temp.T)
-	# temp = temp.T
-	# with open('p1_fin.xyz','w') as file:
-	# 	for i in range(temp.shape[0]):
-	# 		file.write('{} {} {}\n'.format(temp[i,0],temp[i,1],temp[i,2]))
-
-	
 	print('Mean square error: {}'.format(ms))
 	print('Rotation Matrix:')
 	print(R)
@@ -348,16 +275,16 @@ if __name__ == '__main__':
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 
-	X = pointcloud1[:1000,0]
-	Y = pointcloud1[:1000,1]
-	Z = pointcloud1[:1000,2]
+	X = pointcloud1[:10000,0]
+	Y = pointcloud1[:10000,1]
+	Z = pointcloud1[:10000,2]
 
 	ax.scatter(X,Y,Z, color='b', marker='o', label='Point Cloud 1')
 	# ax.plot_wireframe(X,Y,Z, color='b')
 
-	X = pointcloud2[:1000,0]
-	Y = pointcloud2[:1000,1]
-	Z = pointcloud2[:1000,2]
+	X = pointcloud2[:10000,0]
+	Y = pointcloud2[:10000,1]
+	Z = pointcloud2[:10000,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='r')
 	ax.scatter(X,Y,Z, color='r', marker='o',label='Point Cloud 2')
@@ -369,28 +296,16 @@ if __name__ == '__main__':
 	# final_p1 = mat.dot(pointcloud1.T)
 	final_p1 = rev_cs_Mat.dot(final_p1.T)
 	final_p1 = final_p1.T
+	# with open('p1_fin_perfect.xyz','w') as file:
+	# 	for i in range(final_p1.shape[0]):
+	# 		file.write('{} {} {}\n'.format(final_p1[i,0],final_p1[i,1],final_p1[i,2]))
 
-	X = final_p1[:1000,0]
-	Y = final_p1[:1000,1]
-	Z = final_p1[:1000,2]
+	X = final_p1[:10000,0]
+	Y = final_p1[:10000,1]
+	Z = final_p1[:10000,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='g')
 	ax.scatter(X,Y,Z, color='g', marker='o', label='Registered Point Cloud')
 	ax.legend()
 
-
 	plt.show()
-
-
-	# print(delta.shape)
-	
-	# print(sigma_p1p2)
-
-	# print(d1)
-	# print(d2)
-
-	# d1.sort()
-	# d2.sort()
-
-	# ind = np.where(np.equal(d1[:1000],d2[:1000]))
-	# print(ind[0].shape)
