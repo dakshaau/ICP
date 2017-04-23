@@ -275,16 +275,18 @@ if __name__ == '__main__':
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 
-	X = pointcloud1[:10000,0]
-	Y = pointcloud1[:10000,1]
-	Z = pointcloud1[:10000,2]
+	npoints = 10000
+
+	X = pointcloud1[:npoints,0]
+	Y = pointcloud1[:npoints,1]
+	Z = pointcloud1[:npoints,2]
 
 	ax.scatter(X,Y,Z, color='b', marker='o', label='Point Cloud 1')
 	# ax.plot_wireframe(X,Y,Z, color='b')
 
-	X = pointcloud2[:10000,0]
-	Y = pointcloud2[:10000,1]
-	Z = pointcloud2[:10000,2]
+	X = pointcloud2[:npoints,0]
+	Y = pointcloud2[:npoints,1]
+	Z = pointcloud2[:npoints,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='r')
 	ax.scatter(X,Y,Z, color='r', marker='o',label='Point Cloud 2')
@@ -300,12 +302,13 @@ if __name__ == '__main__':
 	# 	for i in range(final_p1.shape[0]):
 	# 		file.write('{} {} {}\n'.format(final_p1[i,0],final_p1[i,1],final_p1[i,2]))
 
-	X = final_p1[:10000,0]
-	Y = final_p1[:10000,1]
-	Z = final_p1[:10000,2]
+	X = final_p1[:npoints,0]
+	Y = final_p1[:npoints,1]
+	Z = final_p1[:npoints,2]
 
 	# ax.plot_wireframe(X,Y,Z, color='g')
 	ax.scatter(X,Y,Z, color='g', marker='o', label='Registered Point Cloud')
 	ax.legend()
+	ax.set_title('Point Cloud Registration | Visualizing {} points'.format(npoints))
 
 	plt.show()
