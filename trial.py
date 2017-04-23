@@ -10,89 +10,132 @@ from sklearn.neighbors import KDTree
 def distance(p1, p2):
 	return np.sqrt(np.sum(np.square(p1-p2),axis=-1))
 
+def createR(q_r, q_t):
+	R = np.eye(4, dtype=q_r.dtype)
+	sq_q_r = np.square(q_r)
+	R[0,0] = sq_q_r[0,0] + sq_q_r[1,0] - sq_q_r[2,0] - sq_q_r[3,0]
+	R[1,1] = sq_q_r[0,0] + sq_q_r[2,0] - sq_q_r[1,0] - sq_q_r[3,0]
+	R[2,2] = sq_q_r[0,0] + sq_q_r[3,0] - sq_q_r[1,0] - sq_q_r[2,0]
+	del sq_q_r
+
+	R[0,1] = 2*(q_r[1,0]*q_r[2,0] + q_r[0,0]*q_r[3,0])
+	R[1,0] = 2*(q_r[1,0]*q_r[2,0] - q_r[0,0]*q_r[3,0])
+
+	R[0,2] = 2*(q_r[1,0]*q_r[3,0] - q_r[0,0]*q_r[2,0])
+	R[0,2] = 2*(q_r[1,0]*q_r[3,0] + q_r[0,0]*q_r[2,0])
+
+	R[1,2] = 2*(q_r[2,0]*q_r[3,0] - q_r[0,0]*q_r[1,0])
+	R[2,1] = 2*(q_r[2,0]*q_r[3,0] + q_r[0,0]*q_r[1,0])
+
+	R[:3,3] = q_t[:,0]
+
+	return R
+
 def Q(p, x):
-	u_p1 = np.mean(p[:,:3],axis=0).reshape((3,1))
-	u_p2 = np.mean(x[:,:3],axis=0).reshape((3,1))
+	u_p1 = np.mean(p[:,:3],axis=0)#.reshape((3,1))
+	u_p2 = np.mean(x[:,:3],axis=0)#.reshape((3,1))
 
 	# print(com_p1.shape, com_p2.T.shape)
 	u_p1p2 = u_p1.dot(u_p2.T)
-	points1 = p[:,:3].reshape((p.shape[0],3,1))
+	points1 = p[:,:3]#.reshape((p.shape[0],3,1))
 	# print(p[:10])
 	# print(points1[:10])
-	points2 = x[:,:3].reshape((x.shape[0],3,1))
+	points2 = x[:,:3]#.reshape((x.shape[0],3,1))
+	p1 = points1 - u_p1
+	p2 = points2 - u_p2
 
-	p1p2 = np.zeros((points1.shape[0],3,3),dtype=points1.dtype)
-	for i in range(points1.shape[0]):
-		p1p2[i,:,:] = points1[i].dot(points2[i].T)[:,:]
+	p1p2 = p1.T.dot(p2)
+	u,s,v = np.linalg.svd(p1p2)
 
-	# print(p1p2[:10])
-	sigma_p1p2 = np.mean(p1p2, axis=0) - u_p1p2
-	del p1p2
-	del points1
-	del points2
+	R = v.T.dot(u.T)
 
-	A = sigma_p1p2 - sigma_p1p2.T
-	# print(A.shape)
+	if np.linalg.det(R) < 0:
+		v[2,:] *= -1
+		R = v.T.dot(u.T)
 
-	delta = np.array([[A[1,2]],[A[2,0]],[A[0,1]]],dtype=A.dtype)
+	u_p1 = u_p1.reshape((3,1))
+	u_p2 = u_p2.reshape((3,1))
+	t = u_p2 - R.dot(u_p1)
+	# print(t.shapes)
 
-	Q_sigma_p1p2 = np.zeros((4,4),dtype=A.dtype)
+	X = np.eye(4,dtype=p.dtype)
 
-	Q_sigma_p1p2[0,0] = np.trace(sigma_p1p2)
-	Q_sigma_p1p2[1:,0] = delta[:,0]
-	Q_sigma_p1p2[0,1:] = delta.T[0,:]
-	temp = sigma_p1p2 + sigma_p1p2.T - (np.trace(sigma_p1p2)*np.eye(3))
-	Q_sigma_p1p2[1:,1:] = temp[:,:]
+	X[:3,:3] = R[:,:]
+	X[:3,3] = t[:,0]
+	R = X[:,:]
+	# p1p2 = np.zeros((points1.shape[0],3,3),dtype=points1.dtype)
+	# for i in range(points1.shape[0]):
+	# 	p1p2[i,:,:] = points1[i].dot(points2[i].T)[:,:]
 
-	u,s,v = np.linalg.svd(Q_sigma_p1p2)
-	# print(u.shape)
-	# print(s.shape)
-	# print(v.shape)
-	# print(np.argmax(s))
-	ind = np.argmax(s)
+	# # print(p1p2[:10])
+	# sigma_p1p2 = np.mean(p1p2, axis=0) - u_p1p2
+	# del p1p2
+	# del points1
+	# del points2
 
-	q_r = v[ind,:]
-	# print(np.sum(np.square(q_r)))
-	# print(q_r.shape)
+	# A = sigma_p1p2 - sigma_p1p2.T
+	# # print(A.shape)
 
-	R = np.eye(4,dtype=A.dtype)
+	# delta = np.array([[A[1,2]],[A[2,0]],[A[0,1]]],dtype=A.dtype)
 
-	sq_q_r = np.square(q_r)
-	R[0,0] = sq_q_r[0] + sq_q_r[1] - sq_q_r[2] - sq_q_r[3]
-	R[1,1] = sq_q_r[0] + sq_q_r[2] - sq_q_r[1] - sq_q_r[3]
-	R[2,2] = sq_q_r[0] + sq_q_r[3] - sq_q_r[1] - sq_q_r[2]
+	# Q_sigma_p1p2 = np.zeros((4,4),dtype=A.dtype)
 
-	R[0,1] = 2*(q_r[1]*q_r[2] + q_r[0]*q_r[3])
-	R[1,0] = 2*(q_r[1]*q_r[2] - q_r[0]*q_r[3])
+	# Q_sigma_p1p2[0,0] = np.trace(sigma_p1p2)
+	# Q_sigma_p1p2[1:,0] = delta[:,0]
+	# Q_sigma_p1p2[0,1:] = delta.T[0,:]
+	# temp = sigma_p1p2 + sigma_p1p2.T - (np.trace(sigma_p1p2)*np.eye(3))
+	# Q_sigma_p1p2[1:,1:] = temp[:,:]
 
-	R[0,2] = 2*(q_r[1]*q_r[3] - q_r[0]*q_r[2])
-	R[0,2] = 2*(q_r[1]*q_r[3] + q_r[0]*q_r[2])
+	# u,s,v = np.linalg.svd(Q_sigma_p1p2)
+	# # print(u.shape)
+	# # print(s.shape)
+	# # print(v.shape)
+	# # print(np.argmax(s))
+	# ind = np.argmax(s)
 
-	R[1,2] = 2*(q_r[2]*q_r[3] - q_r[0]*q_r[1])
-	R[2,1] = 2*(q_r[2]*q_r[3] + q_r[0]*q_r[1])
+	# q_r = v[ind,:]
+	# q_r = q_r.reshape((q_r.shape[0],1))
+	# # print(np.sum(np.square(q_r)))
+	# # print(q_r.shape)
 
-	q_t = u_p2 - R[:3,:3].dot(u_p1)
+	# R = createR(q_r, np.zeros((3,1)))
 
-	# q = np.hstack((R,q_t))
-	# print(R)
-	# print(q_t)
-	# q_t[0,0] += 0.0000017
-	# print(q)
-	R[0,3] = q_t[0,0]
-	R[1,3] = q_t[1,0]
-	R[2,3] = q_t[2,0]
+	# # sq_q_r = np.square(q_r)
+	# # R[0,0] = sq_q_r[0] + sq_q_r[1] - sq_q_r[2] - sq_q_r[3]
+	# # R[1,1] = sq_q_r[0] + sq_q_r[2] - sq_q_r[1] - sq_q_r[3]
+	# # R[2,2] = sq_q_r[0] + sq_q_r[3] - sq_q_r[1] - sq_q_r[2]
+
+	# # R[0,1] = 2*(q_r[1]*q_r[2] + q_r[0]*q_r[3])
+	# # R[1,0] = 2*(q_r[1]*q_r[2] - q_r[0]*q_r[3])
+
+	# # R[0,2] = 2*(q_r[1]*q_r[3] - q_r[0]*q_r[2])
+	# # R[0,2] = 2*(q_r[1]*q_r[3] + q_r[0]*q_r[2])
+
+	# # R[1,2] = 2*(q_r[2]*q_r[3] - q_r[0]*q_r[1])
+	# # R[2,1] = 2*(q_r[2]*q_r[3] + q_r[0]*q_r[1])
+
+	# q_t = u_p2 - R[:3,:3].dot(u_p1)
+
+	# # q = np.hstack((R,q_t))
+	# # print(R)
+	# # print(q_t)
+	# # q_t[0,0] += 0.0000017
+	# # print(q)
+	# R[0,3] = q_t[0,0]
+	# R[1,3] = q_t[1,0]
+	# R[2,3] = q_t[2,0]
 	# rotated_p1 = R.dot(p[:,:3].T)
 	# rotated_p1 = p[:,:3].T
 	# print(rotated_p1.T[:5])
 	# final_p1 = rotated_p1 + q_t*np.ones(rotated_p1.shape)
-	final_p1 = R.dot(p.T)
-	# print(q_t*np.ones(rotated_p1.shape)[:,:5])
-	# print(final_p1.shape)
-	final_p1 = final_p1.T
+	# final_p1 = X.dot(p.T)
+	# # print(q_t*np.ones(rotated_p1.shape)[:,:5])
+	# # print(final_p1.shape)
+	# final_p1 = final_p1.T
 
-	ms = np.square(distance(x[:,:3],final_p1[:,:3]))
-	ms = np.mean(ms, axis = 0)
-	return ms, R, q_t
+	# ms = np.square(distance(x[:,:3],final_p1[:,:3]))
+	# ms = np.mean(ms, axis = 0)
+	return R, R[:3,:3], R[:3,3] 
 
 def closest_point(p1, tree, p2):
 	
@@ -124,33 +167,57 @@ def closest_point(p1, tree, p2):
 	return p
 
 def ICP(p1, p2):
+	iters = 1000
 	p0 = p1[:,:]
-	R0 = np.eye(4,dtype=np.float32)
-	t0 = np.array([[0],[0],[0]],dtype=np.float32)
+	R0 = None
+	X0 = np.eye(4, dtype=np.float32)
+	# t0 = np.array([[0],[0],[0]],dtype=np.float32)
+	# q0 = np.array([[1],[0],[0],[0],[0],[0],[0]], dtype=p0.dtype)
 	tree = KDTree(p2)
-	p0 = R0.dot(p0.T)
+	# R0 = createR(q0[:4,:],q0[4:,:])
+	p0 = X0.dot(p0.T)
 	p0 = p0.T
-	m_err = np.mean(np.square(distance(p2[:,:3],p0[:,:3])), axis=0)
+	t = None
+	m_err = np.mean(distance(p2,p0),axis=0)
+	# del_theta = 10.
+	# theta0 = 0.
+	# delQ0 = None
+	# # delQ = np.zeros((iters),np.float32)
+	# ms = np.zeros((iters),np.float32)
+	# theta = np.zeros((iters),np.float32)
+	# v = np.zeros((iters),np.float32)
 	print('Initial Error: {}'.format(m_err))
-	for i in range(1000):
-		Y = closest_point(p0, tree, p2)
-		# if i == 0:
-		# 	break
-		ms, R0, t0 = Q(p0, Y)
-		p0 = R0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
-		p0 = p0.T
-		diff = m_err - ms
-		if abs(diff) < 1e-6:
-			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
-			break
-		m_err = ms
-		if i%10 == 0:
-			print('Mean square error at iteration {}: {}'.format(i, ms))
-	# m_err, R0, t0 = Q(p0, p2)
-	# p0 = R0.dot(p0.T) # + t0*np.ones(p0.T.shape)
-	# p0 = p0.T
-	# print('Mean square error at iteration {}: {}'.format(0, m_err))
-	return m_err, R0, t0, p0
+	# for i in range(iters):
+	# 	Y = closest_point(p0, tree, p2)
+	# 	# if i == 0:
+	# 	# 	break
+	# 	X0, R0, t = Q(p0, Y)
+	# 	# delQ = q - q0
+	# 	# angle = delQ.T.dot(delQ0)/(np.linalg.norm(delQ,axis=0)*np.linalg.norm(delQ0,axis=0))
+	# 	# theta = np.arccos(angle) * 180./np.pi
+	# 	# if i >= 1:
+	# 	# 	theta0 = theta
+	# 	# 	delQ0 = delQ
+	# 	# if theta < del
+	# 	# R0 = createR(q[:4,:],q[4:,:])
+	# 	p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
+	# 	p0 = p0.T
+	# 	ms = distance(Y[:,:3], p0[:,:3])
+	# 	ms = np.mean(ms,axis=0)
+	# 	diff = m_err - ms
+	# 	if abs(diff) < 1e-10:
+	# 		print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
+	# 		break
+	# 	m_err = ms
+	# 	if i%10 == 0:
+	# 		print('Mean square error at iteration {}: {}'.format(i, ms))
+	X0, R0, t = Q(p0, p2)
+	# R0 = createR(q[:4,:],q[4:,:])
+	p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
+	p0 = p0.T
+	m_err = np.mean(distance(p2[:,:3],p0[:,:3]),axis=0)
+	print('Mean square error at iteration {}: {}'.format(0, m_err))
+	return m_err, X0, R0, t, p0
 
 if __name__ == '__main__':
 	dir = 'point_cloud_registration'
@@ -249,10 +316,11 @@ if __name__ == '__main__':
 	ms = None
 	print()
 	cur = dt.now()
-	ms, R, t, final_p1 = ICP(pc1[:,:], pc2[:,:])
+	ms, X, R, t, final_p1 = ICP(pc1[:,:], pc2[:,:])
 	new_cur = dt.now()
 	delt = new_cur - cur
 	print('Time Taken: {}'.format(str(delt)))
+	# t = R[:3,3]
 	# print(ind.shape)
 
 	# d1 = distance(pointcloud1[0,:3], pointcloud1[:,:3])
@@ -267,12 +335,12 @@ if __name__ == '__main__':
 	
 	print('Mean square error: {}'.format(ms))
 	print('Rotation Matrix:')
-	print(R[:3,:3])
+	print(R)
 	print('Translation Matrix:')
 	print(t)
 
 	print('\nComplete Transformation Matrix:')
-	mat = rev_cs_Mat.dot(R.dot(cs_Mat))
+	mat = rev_cs_Mat.dot(X.dot(cs_Mat))
 	print(mat)
 	# print(pointcloud2[:5])
 	# print(final_p1[:5])
@@ -298,7 +366,8 @@ if __name__ == '__main__':
 	ax.set_ylabel('Longitude')
 	ax.set_zlabel('Altitude')
 	
-	final_p1 = mat.dot(pointcloud1.T)
+	# final_p1 = mat.dot(pointcloud1.T)
+	final_p1 = rev_cs_Mat.dot(final_p1.T)
 	final_p1 = final_p1.T
 
 	X = final_p1[:1000,0]
