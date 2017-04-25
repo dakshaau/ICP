@@ -113,7 +113,7 @@ def get_degree_to_meter(ref, points):
 	arcsin = lambda x: np.arcsin(x)
 	sin = lambda x: np.sin(x)
 	cos = lambda x: np.cos(x)
-	ER = 6371000
+	ER = 6371000.
 
 	p = points*(pi/180.)
 	ab = ref - p
@@ -123,10 +123,13 @@ def get_degree_to_meter(ref, points):
 def get_meter_to_degree(ref, points, slat, slng):
 	ER = 6371000.
 	pi = np.pi
+	sin = lambda x: np.sin(x)
 	cos = lambda x: np.cos(x)
 	arcsin = lambda x: np.arcsin(x)
 	lat = (ref[0] - points[:,0]/ER)*(180./pi)
-	lng = (ref[1] - 2*arcsin(np.sqrt(np.square(points[:,1]/(2*ER))/cos(ref[0]))))*(180./pi)
+	# numer = np.square()
+
+	lng = (ref[1] - 2*arcsin(np.sqrt((np.square(sin(points[:,1]/(2*ER))) + np.square(sin(ref[0]/2.)))/cos(ref[0]))))*(180./pi)
 	sign = 1
 	if np.min(lat) < 0:
 		sign *= -1
@@ -203,8 +206,21 @@ if __name__ == '__main__':
 	minX = min(np.min(pc1[:,0]), np.min(pc2[:,0]))
 	minY = min(np.min(pc1[:,1]), np.min(pc2[:,1]))
 
-	# print(minX, minY)
+	dist = np.zeros((2,2))
+	print(pointcloud1[:2,:2])
 
+	dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((pointcloud1[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
+	dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), pointcloud1[:2,1].reshape((dist.shape[0],1)))))[:]
+	print(dist)
+
+	p = get_meter_to_degree(np.array([0.,0.]), dist, signLat, signLong)
+	print(p)
+	# print(minX, minY)
+	dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((p[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
+	dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), p[:2,1].reshape((dist.shape[0],1)))))[:]
+	print(dist)
+
+	exit()
 	cs_Mat = np.eye(4,dtype=pointcloud1.dtype)
 	# cs_Mat[0,0] *= 10**scaleLat
 	# cs_Mat[1,1] *= 10**scaleLong
