@@ -2,11 +2,12 @@ import numpy as np
 import os
 import pickle
 from datetime import datetime as dt, timedelta
-from read_data import readFile
+from read_data_py27 import readFile
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KDTree
-from icp import icp
+# from icp import icp
+from pcl import _pcl, registration as reg
 
 def distance(p1, p2):
 	return np.sqrt(np.sum(np.square(p1-p2),axis=-1))
@@ -76,38 +77,38 @@ def closest_point(p1, tree, p2):
 	del ind
 	return p
 
-def ICP(p1, p2):
-	iters = 1000
-	p0 = p1[:,:]
-	R0 = None
-	X0 = np.eye(4, dtype=np.float32)
-	tree = KDTree(p2)
-	p0 = X0.dot(p0.T)
-	p0 = p0.T
-	t = None
-	m_err = np.mean(distance(p2,p0),axis=0)
-	print('Initial Error: {}'.format(m_err))
-	for i in range(iters):
-		Y = closest_point(p0, tree, p2)
-		X0, R0, t = Q(p0, Y)
-		p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
-		p0 = p0.T
-		ms = distance(Y[:,:3], p0[:,:3])
-		ms = np.mean(ms,axis=0)
-		diff = m_err - ms
-		if 0 < diff < 1e-10:
-			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
-			break
-		m_err = ms
-		if i%10 == 0:
-			print('Mean square error at iteration {}: {}'.format(i, ms))
-	# X0, R0, t = Q(p0, p2)
-	# # R0 = createR(q[:4,:],q[4:,:])
-	# p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
-	# p0 = p0.T
-	# m_err = np.mean(distance(p2[:,:3],p0[:,:3]),axis=0)
-	# print('Mean square error at iteration {}: {}'.format(0, m_err))
-	return m_err, X0, R0, t, p0
+# def ICP(p1, p2):
+# 	iters = 1000
+# 	p0 = p1[:,:]
+# 	R0 = None
+# 	X0 = np.eye(4, dtype=np.float32)
+# 	tree = KDTree(p2)
+# 	p0 = X0.dot(p0.T)
+# 	p0 = p0.T
+# 	t = None
+# 	m_err = np.mean(distance(p2,p0),axis=0)
+# 	print('Initial Error: {}'.format(m_err))
+# 	for i in range(iters):
+# 		Y = closest_point(p0, tree, p2)
+# 		X0, R0, t = Q(p0, Y)
+# 		p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
+# 		p0 = p0.T
+# 		ms = distance(Y[:,:3], p0[:,:3])
+# 		ms = np.mean(ms,axis=0)
+# 		diff = m_err - ms
+# 		if 0 < diff < 1e-10:
+# 			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
+# 			break
+# 		m_err = ms
+# 		if i%10 == 0:
+# 			print('Mean square error at iteration {}: {}'.format(i, ms))
+# 	# X0, R0, t = Q(p0, p2)
+# 	# # R0 = createR(q[:4,:],q[4:,:])
+# 	# p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
+# 	# p0 = p0.T
+# 	# m_err = np.mean(distance(p2[:,:3],p0[:,:3]),axis=0)
+# 	# print('Mean square error at iteration {}: {}'.format(0, m_err))
+# 	return m_err, X0, R0, t, p0
 
 def get_degree_to_meter(ref, points):
 	pi = np.pi
@@ -146,9 +147,9 @@ def get_meter_to_degree(ref, points, slat, slng):
 if __name__ == '__main__':
 	dir = 'point_cloud_registration'
 	filenames = ['pointcloud1.fuse', 'pointcloud2.fuse']
-	names = ['pointcloud1','pointcloud2']
-	pointcloud1 = readFile('{}/{}'.format(dir, filenames[0]), names[0])
-	pointcloud2 = readFile('{}/{}'.format(dir, filenames[1]), names[1])
+	names = ['pointcloud1_py27','pointcloud2_py27']
+	pointcloud1 = readFile('%s/%s'%(dir, filenames[0]), names[0])
+	pointcloud2 = readFile('%s/%s'%(dir, filenames[1]), names[1])
 	
 	print(pointcloud1.shape)
 	print(pointcloud2.shape)
@@ -207,18 +208,18 @@ if __name__ == '__main__':
 	minX = min(np.min(pc1[:,0]), np.min(pc2[:,0]))
 	minY = min(np.min(pc1[:,1]), np.min(pc2[:,1]))
 
-	dist = np.zeros((2,2))
-	print(pointcloud1[:2,:2])
+	# dist = np.zeros((2,2))
+	# print(pointcloud1[:2,:2])
 
-	dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((pointcloud1[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
-	dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), pointcloud1[:2,1].reshape((dist.shape[0],1)))))[:]
-	print(dist)
+	# dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((pointcloud1[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
+	# dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), pointcloud1[:2,1].reshape((dist.shape[0],1)))))[:]
+	# print(dist)
 
-	p = get_meter_to_degree(np.array([0.,0.]), dist, signLat, signLong)
-	print(p)
+	# p = get_meter_to_degree(np.array([0.,0.]), dist, signLat, signLong)
+	# print(p)
 	# print(minX, minY)
-	dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((p[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
-	dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), p[:2,1].reshape((dist.shape[0],1)))))[:]
+	# dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((p[:2,0].reshape((dist.shape[0],1)), np.zeros((dist.shape[0],1), dtype=np.float32))))[:]
+	# dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((dist.shape[0],1), dtype=np.float32), p[:2,1].reshape((dist.shape[0],1)))))[:]
 	# print(dist)
 
 	# exit()
@@ -274,20 +275,30 @@ if __name__ == '__main__':
 
 	# print(T, dist)
 
-	# exit()
-	ms = None
-	print()
+	p1 = _pcl.PointCloud(np.float32(pc1[:,:3]))
+	p2 = _pcl.PointCloud(np.float32(pc2[:,:3]))
 	cur = dt.now()
-	ms, X, R, t, final_p1 = ICP(pc1[:,:], pc2[:,:])
+	c, T, p, err = reg.icp(p1, p2, max_iter = 1000)
 	new_cur = dt.now()
 	delt = new_cur - cur
-	print('Time Taken: {}'.format(str(delt)))
+	print('Time Taken: %s'%(str(delt)))
 
-	print('Mean square error: {}'.format(ms))
-	print('Rotation Matrix:')
-	print(R)
-	print('Translation Matrix:')
-	print(t)
+	final_p1 = p.to_array()
+	print('Error %f'%(err))
+	print('Transformation Matrix:')
+	print(T)
+
+	# # exit()
+	# ms = None
+	# print()
+	
+	# ms, X, R, t, final_p1 = ICP(pc1[:,:], pc2[:,:])
+
+	# print('Mean square error: {}'.format(ms))
+	# print('Rotation Matrix:')
+	# print(R)
+	# print('Translation Matrix:')
+	# print(t)
 
 	# print('\nComplete Transformation Matrix:')
 	# mat = rev_cs_Mat.dot(X.dot(cs_Mat))
@@ -339,6 +350,6 @@ if __name__ == '__main__':
 	# ax.plot_wireframe(X,Y,Z, color='g')
 	ax.scatter(X,Y,Z, color='g', marker='o', label='Registered Point Cloud')
 	ax.legend()
-	ax.set_title('Point Cloud Registration | Visualizing {} points'.format(npoints))
+	ax.set_title('Point Cloud Registration | Visualizing %d points'%(npoints))
 
 	plt.show()
