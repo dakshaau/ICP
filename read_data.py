@@ -5,7 +5,7 @@ from datetime import datetime as dt, timedelta
 
 def readFile(file, name):
 	if not os.path.exists(name):
-		data = np.loadtxt(file, delimiter=' ')
+		data = np.loadtxt(file, delimiter=' ')#, skiprows=1)
 		pickle.dump(data, open(name,'wb'))
 		return data
 	else:
@@ -15,8 +15,10 @@ def readFile(file, name):
 if __name__ == '__main__':
 	cur = dt.now()
 	dir = 'point_cloud_registration'
-	filenames = ['pointcloud1.fuse', 'pointcloud2.fuse']
-	names = ['pointcloud1','pointcloud2']
+	# filenames = ['pointcloud1.fuse', 'pointcloud2.fuse']
+	filenames = ['data_bunny.txt', 'model_bunny.txt']
+	names = ['data','model']
+	# names = ['pointcloud1','pointcloud2']
 	data = readFile('{}/{}'.format(dir,filenames[1]),names[1])
 	new_cur = dt.now()
 	delta = new_cur - cur
