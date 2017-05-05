@@ -26,7 +26,7 @@ class ROTNODE():
 			return self.w < a.w
 	
 	def __str__(self):
-		return 'a: {}\nb: {}\nc: {}\nw: {}\nl: {}\nub: {}\nlb: {}'.format(self.a,
+		return 'a: {}, b: {}, c: {}, w: {}, l: {}, ub: {}, lb: {}'.format(self.a,
 			self.b, self.c, self.w, self.l, self.ub, self.lb)
 
 
@@ -46,7 +46,7 @@ class TRANSNODE():
 			return self.w < a.w
 
 	def __str__(self):
-		return 'x: {}\ny: {}\nz: {}\nw: {}\nub: {}\nlb: {}'.format(self.x,
+		return 'x: {}, y: {}, z: {}, w: {}, ub: {}, lb: {}'.format(self.x,
 			self.y, self.z, self.w, self.ub, self.lb)
 
 
@@ -56,38 +56,12 @@ def distance(p1, p2):
 def L2_error(p1, p2):
 	return np.sum(np.square(distance(p1,p2)))
 
-def createR(q_r, q_t):
-	R = np.eye(4, dtype=q_r.dtype)
-	sq_q_r = np.square(q_r)
-	R[0,0] = sq_q_r[0,0] + sq_q_r[1,0] - sq_q_r[2,0] - sq_q_r[3,0]
-	R[1,1] = sq_q_r[0,0] + sq_q_r[2,0] - sq_q_r[1,0] - sq_q_r[3,0]
-	R[2,2] = sq_q_r[0,0] + sq_q_r[3,0] - sq_q_r[1,0] - sq_q_r[2,0]
-	del sq_q_r
-
-	R[0,1] = 2*(q_r[1,0]*q_r[2,0] + q_r[0,0]*q_r[3,0])
-	R[1,0] = 2*(q_r[1,0]*q_r[2,0] - q_r[0,0]*q_r[3,0])
-
-	R[0,2] = 2*(q_r[1,0]*q_r[3,0] - q_r[0,0]*q_r[2,0])
-	R[0,2] = 2*(q_r[1,0]*q_r[3,0] + q_r[0,0]*q_r[2,0])
-
-	R[1,2] = 2*(q_r[2,0]*q_r[3,0] - q_r[0,0]*q_r[1,0])
-	R[2,1] = 2*(q_r[2,0]*q_r[3,0] + q_r[0,0]*q_r[1,0])
-
-	R[:3,3] = q_t[:,0]
-
-	return R
-
 def Q(p, x):
-	# print(p.shape)
-	# print(x.shape)
 	u_p1 = np.mean(p[:,:3],axis=0)#.reshape((3,1))
 	u_p2 = np.mean(x[:,:3],axis=0)#.reshape((3,1))
 
-	# print(com_p1.shape, com_p2.T.shape)
 	u_p1p2 = u_p1.dot(u_p2.T)
 	points1 = p[:,:3]#.reshape((p.shape[0],3,1))
-	# print(p[:10])
-	# print(points1[:10])
 	points2 = x[:,:3]#.reshape((x.shape[0],3,1))
 	p1 = points1 - u_p1
 	p2 = points2 - u_p2
@@ -110,7 +84,6 @@ def Q(p, x):
 	u_p1 = u_p1.reshape((3,1))
 	u_p2 = u_p2.reshape((3,1))
 	t = u_p2 - R.dot(u_p1)
-	# print(t.shapes)
 
 	X = np.eye(4,dtype=p.dtype)
 
@@ -133,11 +106,9 @@ def closest_point(p1, tree, p2):
 def ICP(p1, p2, tree, R=np.eye(3), T=np.zeros((3,1))):
 	iters = 1000
 	p0 = p1[:,:]
-	# R0 = None
 	X0 = np.eye(4, dtype=np.float32)
 	r = R[:,:]
 	t = T[:,:]
-	# tree = KDTree(p2)
 	X0[:3,:3] = r[:,:]
 	X0[:3,3] = t[:,0]
 	p0 = X0.dot(p0.T)
@@ -146,21 +117,11 @@ def ICP(p1, p2, tree, R=np.eye(3), T=np.zeros((3,1))):
 	m_err = L2_error(p2[:,:3],p0[:,:3])
 	del p
 	del _
-	# print('Initial Error: {}'.format(m_err))
-	X = X0[:,:]
-	# print(X)
+	print('Initial Error: {}'.format(m_err))
 	for i in range(iters):
-		X = X0[:,:]
 		Y, _ = closest_point(p0, tree, p2)
 		X0, R0, t0 = Q(p0, Y)
 		
-		# X = X0.dot(X)
-		# print('\n{}\n'.format(i))
-		# print(X)
-
-		# r = X[:3,:3]
-		# t = X[:3,3]
-
 		r = R0.dot(r)
 		t = R0.dot(t) + t0
 		p0 = X0.dot(p0.T) #+ t0*np.ones(p0.T.shape)
@@ -169,24 +130,19 @@ def ICP(p1, p2, tree, R=np.eye(3), T=np.zeros((3,1))):
 		# del _
 		diff = m_err - ms
 		if 0 <= diff < 1e-10:
-			# print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
+			print('Previous error: {}\nCurrent Error: {}\nDifference: {}'.format(m_err, ms, diff))
 			m_err = ms
-			# print(X)
 			break
 		m_err = ms
-		# if i%10 == 0:
-		# 	print('L2 error at iteration {}: {}'.format(i, ms))
-			# print(X)
+		if i%10 == 0:
+			print('L2 error after iteration {}: {}'.format(i, ms))
 	# X0, r, t = Q(p0, p2)
-	# # R0 = createR(q[:4,:],q[4:,:])
 	# p0 = X0.dot(p0.T) # + t0*np.ones(p0.T.shape)
 	# p0 = p0.T
 	# m_err = L2_error(p2[:,:3],p0[:,:3])
-	# # print('Mean square error at iteration {}: {}'.format(0, m_err))
+	# print('L2 Error after registration: {}'.format(m_err))
 	X0[:3,:3] = r[:,:]
 	X0[:3,3] = t[:,0]
-	# print(X)
-	# print(i)
 	return m_err, X0, r, t.reshape((3,1)), p0
 
 def get_degree_to_meter(ref, points):
@@ -229,22 +185,8 @@ def OuterBnB(p1, p2, initRot, initTrans):
 	norm = np.linalg.norm(p1,axis=1)
 	global maxrotlvl, maxRotDis, minDis, optR, optT, optError, SSEThresh
 	maxrotlvl = 20
-	# maxRotDis = np.zeros((maxrotlvl,p1.shape[0]))
-	# for i in range(maxrotlvl):
-	# 	sigma = initRot.w/(2**i)/2.
-	# 	maxAngle = (3**0.5)*sigma
-
-	# 	if maxAngle > pi:
-	# 		maxAngle = pi
-
-	# 	maxRotDis[i,:] = 2*np.sin(maxAngle/2)*norm[:]
-
-	# del norm
 
 	tree = KDTree(p2)
-	# error, X, R_icp, T_icp, p0 = ICP(p1, p2, tree, R_icp, T_icp)
-	# return error, R_icp, T_icp
-	
 
 	nodeRot = ROTNODE()
 	nodeRotParent = ROTNODE()
@@ -308,6 +250,8 @@ def OuterBnB(p1, p2, initRot, initTrans):
 			nodeRot.b = nodeRotParent.b + (j>>1&1) * nodeRot.w
 			nodeRot.c = nodeRotParent.c + (j>>2&1) * nodeRot.w
 
+			# print('Count: {}, Subcube {}'.format(count, j+1))
+			# print(nodeRot)
 			# print(j, nodeRot)
 
 			v1 = nodeRot.a + nodeRot.w/2
@@ -321,6 +265,7 @@ def OuterBnB(p1, p2, initRot, initTrans):
 			t = np.linalg.norm([v1,v2,v3])
 			R_ = np.eye(4)
 			# p0 = None
+			# print('t: {}'.format(t))
 
 			if t > 0:
 				v1 /= t
@@ -343,11 +288,14 @@ def OuterBnB(p1, p2, initRot, initTrans):
 
 				p0 = R_.dot(p0.T)
 				p0 = p0.T
+				# print('New Rotation')
 
 			else:
 				p0[:,:] = p1[:,:]
 
 			ub, T = InnerBnB(p0, p2, initTrans, R_[:3,:3], None, tree, optError)
+			# print(count)
+			# print(ub, T)
 			# print(optError)
 
 			if ub < optError:
@@ -392,6 +340,7 @@ def OuterBnB(p1, p2, initRot, initTrans):
 			# print(nodeRot.l)
 			lb, _ = InnerBnB(p0, p2, initTrans, R_[:3,:3], maxRotDis, tree, optError)
 			# print(lb)
+			# print(lb)
 
 			if lb >= optError:
 				continue
@@ -402,7 +351,7 @@ def OuterBnB(p1, p2, initRot, initTrans):
 			# print(queueRot.qsize())
 	# print(count)
 	return optError, optR, optT
-# p0, p2, nodeTrans, R_, None, tree
+
 def InnerBnB(p0, p2, initTrans, R, maxRotDisL, tree, optError):
 	nodeTrans = TRANSNODE()
 	queueTrans = PriorityQueue()
@@ -432,7 +381,9 @@ def InnerBnB(p0, p2, initTrans, R, maxRotDisL, tree, optError):
 			nodeTrans.y = nodeTransParent.y + (j>>1&1)*nodeTrans.w
 			nodeTrans.z = nodeTransParent.z + (j>>2&1)*nodeTrans.w
 
-			
+			# print('Count: {}, Subcube {}'.format(count, j+1))
+			# print(nodeTrans)
+
 			trans = np.eye(4)
 			trans[0,3] = nodeTrans.x + nodeTrans.w/2
 			trans[1,3] = nodeTrans.y + nodeTrans.w/2
@@ -485,33 +436,32 @@ def InnerBnB(p0, p2, initTrans, R, maxRotDisL, tree, optError):
 if __name__ == '__main__':
 	dir = 'point_cloud_registration'
 	filenames = ['pointcloud1.fuse', 'pointcloud2.fuse']
-	# filenames = ['data_bunny.txt', 'model_bunny.txt']
-	# names = ['data','model']
 	names = ['pointcloud1','pointcloud2']
 	pointcloud1 = readFile('{}/{}'.format(dir, filenames[0]), names[0])
 	pointcloud2 = readFile('{}/{}'.format(dir, filenames[1]), names[1])
 	
 	print(pointcloud1.shape)
 	print(pointcloud2.shape)
+	i1 = None
+	i2 = None
 	if pointcloud1.shape[1] == 4:
 		# store available intensities separately
 		i1 = pointcloud1[:,3]
 		i2 = pointcloud2[:,3]
 	else:
+		# Create homogenous coordinates to redue time of transformations.
 		pointcloud1 = np.hstack((pointcloud1, np.ones((pointcloud1.shape[0],1))))
 		pointcloud2 = np.hstack((pointcloud2, np.ones((pointcloud2.shape[0],1))))
 
 	minPoints = min(pointcloud1.shape[0],pointcloud2.shape[0])
-	# print(np.max(i1))
-	# print(i1.shape)
-
-	# ind = np.where(np.equal(pointcloud1[:,3],pointcloud2[:,3]))[0]
 
 	'''
 
-	Increasing the Lat Long values by a scale of 1000 too increase the mean square error
+	Changing coordinate system from degrees to meters.
 
 	'''
+	
+	# This segment is to store the sign information of the latitiudes and longitudes.
 	signLat = 1
 	if np.min(pointcloud1[:,0]) < 0:
 		signLat *= -1
@@ -519,10 +469,13 @@ if __name__ == '__main__':
 	if np.min(pointcloud1[:,1]) < 0:
 		signLong *= -1
 
+
 	pc1 = np.zeros(pointcloud1.shape, dtype=pointcloud1.dtype)
 	pc2 = np.zeros(pointcloud2.shape, dtype=pointcloud2.dtype)
 
+	# This command converts the latitude coordinate to meters
 	pc1[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((pointcloud1[:,0].reshape((pc1.shape[0],1)), np.zeros((pc1.shape[0],1), dtype=np.float32))))[:]
+	# This command converts the longitude coordinate to meters
 	pc1[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((pc1.shape[0],1), dtype=np.float32), pointcloud1[:,1].reshape((pc1.shape[0],1)))))[:]
 	pc1[:,2] = pointcloud1[:,2]
 	pc1[:,3] = 1.
@@ -536,30 +489,13 @@ if __name__ == '__main__':
 	minY = min(np.min(pc1[:,1]), np.min(pc2[:,1]))
 
 	cs_Mat = np.eye(4,dtype=pointcloud1.dtype)
-	# cs_Mat[0,0] *= 10**scaleLat
-	# cs_Mat[1,1] *= 10**scaleLong
 	cs_Mat[0,3] = -minX
 	cs_Mat[1,3] = -minY
 	rev_cs_Mat = np.linalg.inv(cs_Mat)
-	# print('Coordinate system conversion matrix:')
-	# print(cs_Mat)
-	# print('Matrix to get back original coordinates:')
-	# print(rev_cs_Mat)
-	# # pointcloud1[:,0] -= minLat
-	# # pointcloud2[:,0] -= minLat
-	# # pointcloud1[:,1] -= minLong
-	# # pointcloud2[:,1] -= minLong
-	# # pointcloud1[:,:2] = pointcloud1[:,:2]*100000
-	# # pointcloud2[:,:2] = pointcloud2[:,:2]*100000
-	# # print(pointcloud1[:2,:])
-	# print(pointcloud2[:2,:2])
-	# dist = np.zeros((2,2))
-	# dist[:,0] = get_degree_to_meter(np.array([0.,0.]), np.hstack((pointcloud2[:2,0].reshape((2,1)), np.zeros((2,1)))))
-	# dist[:,1] = get_degree_to_meter(np.array([0.,0.]), np.hstack((np.zeros((2,1)), pointcloud2[:2,1].reshape((2,1)))))
-	# print(dist)
-
-	# p = get_meter_to_degree(np.array([0.,0.]), dist, signLat, signLong)
-	# print(p)
+	print('Coordinate system conversion matrix:')
+	print(cs_Mat)
+	print('Matrix to get back original coordinates:')
+	print(rev_cs_Mat)
 
 	pc1 = cs_Mat.dot(pc1.T)
 	pc1 = pc1.T
@@ -568,28 +504,6 @@ if __name__ == '__main__':
 	# pc1 = pointcloud1
 	# pc2 = pointcloud2
 
-	# temp = rev_cs_Mat.dot(pc2.T)
-	# temp = temp.T
-
-	# with open('p2_1.pts','w') as file:
-	# 	for i in range(temp.shape[0]):
-	# 		file.write('{},{},{},{}\n'.format(temp[i,0],temp[i,1],temp[i,2],i2[i]))
-
-	# temp = rev_cs_Mat.dot(pc1.T)
-	# temp = temp.T
-
-	# with open('p1_1.pts','w') as file:
-	# 	for i in range(temp.shape[0]):
-	# 		file.write('{},{},{},{}\n'.format(temp[i,0],temp[i,1],temp[i,2],i1[i]))
-
-	# del temp
-	# exit()
-
-	# T, dist = icp(pc1[:,:3], pc2[:,:3])
-
-	# print(T, dist)
-
-	# exit()
 	err = None
 	initRot = ROTNODE()
 	initTrans = TRANSNODE()
@@ -611,8 +525,24 @@ if __name__ == '__main__':
 	print()
 	cur = dt.now()
 	# minPoints = 10000
-	# err, X0, R, T, final_p1 = ICP(pc1[:minPoints,:], pc2[:minPoints,:], KDTree(pc2[:minPoints,:]))
-	err, R, T = OuterBnB(pc1[:minPoints,:], pc2[:minPoints,:], initRot, initTrans)
+
+	# We want the number of points in the model and data point cloud to be same
+
+	'''
+	The command below is to run ICP only.
+
+	'''
+	
+	err, X0, R, T, final_p1 = ICP(pc1[:minPoints,:], pc2[:minPoints,:], KDTree(pc2[:minPoints,:]))
+	
+
+	'''
+	The command below is to run BnB with ICP, as escribed in Go-ICP.
+	'''
+
+	# err, R, T = OuterBnB(pc1[:minPoints,:], pc2[:minPoints,:], initRot, initTrans)
+	
+
 	new_cur = dt.now()
 	delt = new_cur - cur
 	print('Time Taken: {}'.format(str(delt)))
@@ -626,23 +556,8 @@ if __name__ == '__main__':
 	X0 = np.eye(4)
 	X0[:3,:3] = R[:,:]
 	X0[:3,3] = T[:,0]
-
-
-	# mat = np.eye(4)
-	# mat[:3,:3] = R[:,:]
-	# mat[:3,3] = T[:,0]
-
-	# print('\nComplete Transformation Matrix:')
-	# mat = rev_cs_Mat.dot(X0.dot(cs_Mat))
-	# print(mat)
-	# print(pointcloud2[:5])
-	# print(final_p1[:5])
-	# pc1 = rev_cs_Mat.dot(pc1.T)
-	# pc1 = pc1.T
-	# pc1[:,:2] = get_meter_to_degree(np.array([0.,0.]), pc1[:,:2], signLat, signLong)[:,:]
-	# pc2 = rev_cs_Mat.dot(pc2.T)
-	# pc2 = pc2.T
-	# pc2[:,:2] = get_meter_to_degree(np.array([0.,0.]), pc2[:,:2], signLat, signLong)[:,:]
+	
+	# Visualizing 10,000 points
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
@@ -653,7 +568,7 @@ if __name__ == '__main__':
 	Y = pc1[:npoints,1]
 	Z = pc1[:npoints,2]
 
-	# ax.scatter(X,Y,Z, color='b', marker='o', label='Point Cloud 1')
+	ax.scatter(X,Y,Z, color='b', marker='o', label='Point Cloud 1')
 	# ax.plot_wireframe(X,Y,Z, color='b')
 
 	X = pc2[:npoints,0]
@@ -668,17 +583,13 @@ if __name__ == '__main__':
 	ax.set_zlabel('Altitude')
 	
 	final_p1 = X0.dot(pc1[:minPoints,:].T)
-	# final_p1 = rev_cs_Mat.dot(final_p1.T)
 	final_p1 = final_p1.T
 	# p, _ = closest_point(final_p1[:,:], KDTree(pc2[:minPoints,:]), pc2[:minPoints,:])
 	# del _
 	# error = L2_error(final_p1, p)
 	# print(error)
 	# print(np.where(np.equal(final_p1[:,:3], pc1[:,:3])))
-	# final_p1[:,:2] = get_meter_to_degree(np.array([0.,0.]), final_p1[:,:2], signLat, signLong)[:,:]
-	# with open('p1_fin.pts','w') as file:
-	# 	for i in range(final_p1.shape[0]):
-	# 		file.write('{},{},{},{}\n'.format(final_p1[i,0],final_p1[i,1],final_p1[i,2],i1[i]))
+	
 
 	X = final_p1[:npoints,0]
 	Y = final_p1[:npoints,1]
@@ -690,3 +601,14 @@ if __name__ == '__main__':
 	ax.set_title('Point Cloud Registration | Visualizing {} points'.format(npoints))
 
 	plt.show()
+
+	final_p1 = rev_cs_Mat.dot(final_p1.T)
+	final_p1 = final_p1.T
+
+	final_p1[:,:2] = get_meter_to_degree(np.array([0.,0.]), final_p1[:,:2], signLat, signLong)[:,:]
+	with open(dir+'/registered_p1.fuse','w') as file:
+		for i in range(final_p1.shape[0]):
+			if not i1 is None:
+				file.write('{} {} {} {}\n'.format(final_p1[i,0],final_p1[i,1],final_p1[i,2],i1[i]))
+			else:
+				file.write('{} {} {}\n'.format(final_p1[i,0],final_p1[i,1],final_p1[i,2]))
